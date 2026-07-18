@@ -6,7 +6,10 @@ import {
   canPlaceWall,
   getModeConfig,
 } from "./gameLogic";
-import { initTelegramApp, getStartParam, getRawInitData, getTelegramUser, shareInviteLink, hapticFeedback } from "./telegram";
+import { 
+  initTelegramApp, getStartParam, getRawInitData, getTelegramUser, shareInviteLink, hapticFeedback,
+  enableClosingConfirmation, disableClosingConfirmation, showBackButton, hideBackButton
+} from "./telegram";
 import { GameSocket } from "./socket";
 import { API_BASE_URL, WS_BASE_URL, IS_BACKEND_CONFIGURED } from "./config";
 import Board, { PLAYER_LABELS } from "./components/Board";
@@ -47,6 +50,29 @@ export default function App() {
     return () => socketRef.current?.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (screen === "playing") {
+      enableClosingConfirmation();
+      hideBackButton();
+    } else if (screen === "finished") {
+      disableClosingConfirmation();
+      
+      const handleBack = () => {
+        socketRef.current?.disconnect();
+        setScreen("mode-select");
+        setState(null);
+        setRoomId(null);
+        setMySlot(null);
+      };
+      
+      showBackButton(handleBack);
+      return () => hideBackButton(handleBack);
+    } else {
+      disableClosingConfirmation();
+      hideBackButton();
+    }
+  }, [screen]);
 
   function connectToBackend(rid) {
     setConnectionStatus("connecting");
@@ -136,7 +162,7 @@ export default function App() {
 
   function handleRematch() {
     if (IS_BACKEND_CONFIGURED) {
-      // TODO: درخواست rematch به بک‌اند
+      socketRef.current?.sendRematch();
       return;
     }
     startLocalHotseat(mode, null);
@@ -184,6 +210,7 @@ export default function App() {
         <div className="topbar__turn">
           {isMyTurn ? "نوبت شماست" : `نوبت ${PLAYER_LABELS[state.turn]}`}
         </div>
+        {state.status === "playing" && <TurnTimer turnStartTime={state.turnStartTime} />}
         <div className="topbar__walls">🧱 {myPlayer ? myPlayer.wallsLeft : "-"}</div>
       </header>
 
@@ -205,30 +232,22 @@ export default function App() {
           >
             حرکت مهره
           </button>
+          
           <button
             className={`btn btn--toggle${actionMode === "wall" ? " btn--active" : ""}`}
-            onClick={() => setActionMode("wall")}
+            onClick={() => {
+              if (actionMode !== "wall") {
+                setActionMode("wall");
+              } else {
+                setWallOrient(w => w === "h" ? "v" : "h");
+              }
+            }}
           >
-            گذاشتن دیوار
+            {actionMode === "wall"
+              ? (wallOrient === "h" ? "▬ دیوار (افقی) 🔄" : "┃ دیوار (عمودی) 🔄")
+              : "گذاشتن دیوار"}
           </button>
         </div>
-
-        {actionMode === "wall" && (
-          <div className="toolbar__group">
-            <button
-              className={`btn btn--toggle${wallOrient === "h" ? " btn--active" : ""}`}
-              onClick={() => setWallOrient("h")}
-            >
-              ▬ افقی
-            </button>
-            <button
-              className={`btn btn--toggle${wallOrient === "v" ? " btn--active" : ""}`}
-              onClick={() => setWallOrient("v")}
-            >
-              ┃ عمودی
-            </button>
-          </div>
-        )}
       </footer>
 
       {errorMsg && (
@@ -261,6 +280,30 @@ function ModeSelect({ onSelect }) {
         برای بازی واقعی با دوستان، این Mini App باید از طریق دکمه‌ی بات با یک room_id باز شود.
         بدون آن، در حالت تست محلی (روی همین دستگاه) اجرا می‌شود.
       </p>
+    </div>
+  );
+}
+
+function TurnTimer({ turnStartTime }) {
+  const [timeLeft, setTimeLeft] = useState(60);
+
+  useEffect(() => {
+    if (!turnStartTime) return;
+    
+    // Initial calculation to prevent 1-second lag
+    const calc = () => Math.max(60 - Math.floor((Date.now() - turnStartTime) / 1000), 0);
+    setTimeLeft(calc());
+    
+    const interval = setInterval(() => {
+      setTimeLeft(calc());
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [turnStartTime]);
+
+  return (
+    <div style={{ color: timeLeft <= 10 ? "var(--danger)" : "inherit", fontWeight: "bold" }}>
+      ⏳ {timeLeft}s
     </div>
   );
 }

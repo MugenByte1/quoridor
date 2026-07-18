@@ -14,6 +14,13 @@
   --accent: #c98a3a;
   --danger: #b4432a;
   --radius: 14px;
+
+  /* Responsive Board Dimensions */
+  --board-size: min(100vw - 60px, 440px);
+  --cell-sz: calc(var(--board-size) * 40 / 440);
+  --gap-sz: calc(var(--board-size) * 10 / 440);
+  --span-sz: calc(var(--cell-sz) + var(--gap-sz));
+  --piece-sz: calc(var(--cell-sz) * 26 / 40);
 }
 
 * {
@@ -148,6 +155,7 @@ body {
   background: var(--cell);
   border-radius: 8px;
   overflow: hidden;
+  touch-action: none; /* Prevent scrolling when dragging walls */
 }
 
 .cell {
@@ -201,10 +209,10 @@ body {
 
 .piece {
   position: absolute;
-  width: 26px;
-  height: 26px;
-  margin-left: -13px;
-  margin-top: -13px;
+  width: var(--piece-sz);
+  height: var(--piece-sz);
+  margin-left: calc(var(--piece-sz) / -2);
+  margin-top: calc(var(--piece-sz) / -2);
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--piece-color) 70%, white), var(--piece-color));
   box-shadow:

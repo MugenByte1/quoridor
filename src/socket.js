@@ -83,6 +83,10 @@ export class GameSocket {
     this.send({ type: "wall", wall });
   }
 
+  sendRematch() {
+    this.send({ type: "rematch" });
+  }
+
   disconnect() {
     this.shouldReconnect = false;
     this.ws?.close();

@@ -1,16 +1,8 @@
 import { useMemo, useState } from "react";
 import { BOARD_SIZE, getValidMoves, goalCellsOf } from "../gameLogic";
 
-const CELL = 40;
-const GAP = 10;
-const SPAN = CELL + GAP;
-
 const PLAYER_COLORS = ["#4f7942", "#8b3a5e", "#2b6e8f", "#b4622a"];
 const PLAYER_LABELS = ["شمال", "جنوب", "غرب", "شرق"];
-
-function cellPos(i) {
-  return i * SPAN;
-}
 
 export default function Board({ state, mySlot, isMyTurn, actionMode, wallOrient, onMove, onWall }) {
   const [hoverWall, setHoverWall] = useState(null); // { x, y, orient }
@@ -29,8 +21,6 @@ export default function Board({ state, mySlot, isMyTurn, actionMode, wallOrient,
 
   if (!state) return null;
 
-  const boardPixels = BOARD_SIZE * CELL + (BOARD_SIZE - 1) * GAP;
-
   const handleCellClick = (x, y) => {
     if (actionMode !== "move" || !isMyTurn) return;
     if (!validMoveKeys.has(`${x},${y}`)) return;
@@ -40,14 +30,40 @@ export default function Board({ state, mySlot, isMyTurn, actionMode, wallOrient,
   const handleWallClick = (x, y, orient) => {
     if (actionMode !== "wall" || !isMyTurn) return;
     onWall({ x, y, orient });
+    setHoverWall(null);
+  };
+
+  // --- Touch Logic for Walls ---
+  const handleTouchMove = (e) => {
+    if (actionMode !== "wall" || !isMyTurn) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (el && el.classList.contains("wall-slot")) {
+      const x = parseInt(el.getAttribute("data-x"));
+      const y = parseInt(el.getAttribute("data-y"));
+      setHoverWall({ x, y, orient: wallOrient });
+    } else {
+      setHoverWall(null);
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (actionMode !== "wall" || !isMyTurn) return;
+    if (hoverWall) {
+      onWall(hoverWall);
+      setHoverWall(null);
+    }
   };
 
   return (
     <div className="board-wrap">
       <div
         className="board"
-        style={{ width: boardPixels, height: boardPixels }}
+        style={{ width: "var(--board-size)", height: "var(--board-size)" }}
         onMouseLeave={() => setHoverWall(null)}
+        onTouchStart={handleTouchMove}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {/* خانه‌ها */}
         {Array.from({ length: BOARD_SIZE }).map((_, y) =>
@@ -59,7 +75,12 @@ export default function Board({ state, mySlot, isMyTurn, actionMode, wallOrient,
               <div
                 key={key}
                 className={`cell${isGoal ? " cell--goal" : ""}${isValidTarget ? " cell--target" : ""}`}
-                style={{ left: cellPos(x), top: cellPos(y), width: CELL, height: CELL }}
+                style={{
+                  left: `calc(${x} * var(--span-sz))`,
+                  top: `calc(${y} * var(--span-sz))`,
+                  width: "var(--cell-sz)",
+                  height: "var(--cell-sz)",
+                }}
                 onClick={() => handleCellClick(x, y)}
               >
                 {isValidTarget && <span className="cell__dot" />}
@@ -75,8 +96,18 @@ export default function Board({ state, mySlot, isMyTurn, actionMode, wallOrient,
             className={`wall wall--${w.orient}`}
             style={
               w.orient === "h"
-                ? { left: cellPos(w.x), top: cellPos(w.y) + CELL, width: CELL * 2 + GAP, height: GAP }
-                : { left: cellPos(w.x) + CELL, top: cellPos(w.y), width: GAP, height: CELL * 2 + GAP }
+                ? {
+                    left: `calc(${w.x} * var(--span-sz))`,
+                    top: `calc(${w.y} * var(--span-sz) + var(--cell-sz))`,
+                    width: `calc(var(--cell-sz) * 2 + var(--gap-sz))`,
+                    height: "var(--gap-sz)",
+                  }
+                : {
+                    left: `calc(${w.x} * var(--span-sz) + var(--cell-sz))`,
+                    top: `calc(${w.y} * var(--span-sz))`,
+                    width: "var(--gap-sz)",
+                    height: `calc(var(--cell-sz) * 2 + var(--gap-sz))`,
+                  }
             }
           />
         ))}
@@ -89,11 +120,23 @@ export default function Board({ state, mySlot, isMyTurn, actionMode, wallOrient,
               const isHover = hoverWall && hoverWall.x === x && hoverWall.y === y;
               const style =
                 wallOrient === "h"
-                  ? { left: cellPos(x), top: cellPos(y) + CELL, width: CELL * 2 + GAP, height: GAP }
-                  : { left: cellPos(x) + CELL, top: cellPos(y), width: GAP, height: CELL * 2 + GAP };
+                  ? {
+                      left: `calc(${x} * var(--span-sz))`,
+                      top: `calc(${y} * var(--span-sz) + var(--cell-sz))`,
+                      width: `calc(var(--cell-sz) * 2 + var(--gap-sz))`,
+                      height: "var(--gap-sz)",
+                    }
+                  : {
+                      left: `calc(${x} * var(--span-sz) + var(--cell-sz))`,
+                      top: `calc(${y} * var(--span-sz))`,
+                      width: "var(--gap-sz)",
+                      height: `calc(var(--cell-sz) * 2 + var(--gap-sz))`,
+                    };
               return (
                 <div
                   key={`slot-${x}-${y}`}
+                  data-x={x}
+                  data-y={y}
                   className={`wall-slot wall-slot--${wallOrient}${isHover ? " wall-slot--hover" : ""}`}
                   style={style}
                   onMouseEnter={() => setHoverWall({ x, y, orient: wallOrient })}
@@ -109,11 +152,12 @@ export default function Board({ state, mySlot, isMyTurn, actionMode, wallOrient,
             key={p.slot}
             className={`piece${p.slot === mySlot ? " piece--me" : ""}`}
             style={{
-              left: cellPos(p.pos[0]) + CELL / 2,
-              top: cellPos(p.pos[1]) + CELL / 2,
-              "--piece-color": PLAYER_COLORS[p.slot],
+              left: `calc(${p.pos[0]} * var(--span-sz) + var(--cell-sz) / 2)`,
+              top: `calc(${p.pos[1]} * var(--span-sz) + var(--cell-sz) / 2)`,
+              "--piece-color": p.eliminated ? "#888" : PLAYER_COLORS[p.slot],
+              opacity: p.eliminated ? 0.3 : 1,
             }}
-            title={PLAYER_LABELS[p.slot]}
+            title={PLAYER_LABELS[p.slot] + (p.eliminated ? " (حذف شده)" : "")}
           />
         ))}
       </div>

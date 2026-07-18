@@ -51,11 +51,13 @@ export function createInitialState(mode) {
       pos: [...s.start],
       wallsLeft: cfg.wallsPerPlayer,
       connected: false,
+      eliminated: false,
     })),
     walls: [], // { x, y, orient: 'h' | 'v' }
     turn: 0, // ایندکس بازیکنی که نوبتشه
     winner: null,
     lastAction: null,
+    turnStartTime: Date.now(), // زمان شروع نوبت
   };
 }
 
@@ -204,6 +206,7 @@ export function canPlaceWall(state, wall) {
   const nextWalls = [...state.walls, wall];
   const testState = { ...state, walls: nextWalls };
   for (let i = 0; i < state.players.length; i++) {
+    if (state.players[i].eliminated) continue;
     if (!hasPathToGoal(testState, i)) {
       return { ok: false, reason: "مسیر یکی از بازیکنان را کاملاً می‌بندد" };
     }
@@ -226,10 +229,11 @@ export function applyMove(state, playerIdx, target) {
   return {
     ...state,
     players,
-    turn: winner === null ? nextTurn(state) : state.turn,
+    turn: winner === null ? nextTurn({ ...state, players }) : state.turn,
     status: winner === null ? "playing" : "finished",
     winner,
     lastAction: { type: "move", playerIdx, target },
+    turnStartTime: Date.now(),
   };
 }
 
@@ -248,13 +252,47 @@ export function applyWall(state, playerIdx, wall) {
     ...state,
     players,
     walls: [...state.walls, wall],
-    turn: nextTurn(state),
+    turn: nextTurn({ ...state, players }),
     lastAction: { type: "wall", playerIdx, wall },
+    turnStartTime: Date.now(),
   };
 }
 
 function nextTurn(state) {
-  return (state.turn + 1) % state.players.length;
+  let next = (state.turn + 1) % state.players.length;
+  let loopCount = 0;
+  while (state.players[next].eliminated && loopCount < state.players.length) {
+    next = (next + 1) % state.players.length;
+    loopCount++;
+  }
+  return next;
+}
+
+export function eliminatePlayer(state, playerIdx) {
+  if (state.status !== "playing") return state;
+  if (state.players[playerIdx].eliminated) return state;
+
+  const players = state.players.map((p, i) => i === playerIdx ? { ...p, eliminated: true } : p);
+  const activePlayers = players.filter(p => !p.eliminated);
+
+  if (activePlayers.length <= 1) {
+    const winner = activePlayers.length === 1 ? activePlayers[0].slot : null;
+    return {
+      ...state,
+      players,
+      status: "finished",
+      winner,
+      lastAction: { type: "eliminate", playerIdx },
+    };
+  }
+
+  const nextState = { ...state, players };
+  if (state.turn === playerIdx) {
+    nextState.turn = nextTurn(nextState);
+  }
+  nextState.lastAction = { type: "eliminate", playerIdx };
+  nextState.turnStartTime = Date.now();
+  return nextState;
 }
 
 // --- کمکی برای UI: مسیر خانه‌های هدف یک بازیکن (برای رنگ‌آمیزی لبه‌ی تخته) ---

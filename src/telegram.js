@@ -81,3 +81,35 @@ export function shareInviteLink(url, text) {
     window.open(shareUrl, "_blank");
   }
 }
+
+export function enableClosingConfirmation() {
+  const tg = getTelegramWebApp();
+  try {
+    tg?.enableClosingConfirmation();
+  } catch (e) {}
+}
+
+export function disableClosingConfirmation() {
+  const tg = getTelegramWebApp();
+  try {
+    tg?.disableClosingConfirmation();
+  } catch (e) {}
+}
+
+export function showBackButton(onClick) {
+  const tg = getTelegramWebApp();
+  if (!tg || !tg.BackButton) return;
+  tg.BackButton.show();
+  if (onClick) {
+    tg.BackButton.onClick(onClick);
+  }
+}
+
+export function hideBackButton(onClick) {
+  const tg = getTelegramWebApp();
+  if (!tg || !tg.BackButton) return;
+  tg.BackButton.hide();
+  if (onClick) {
+    tg.BackButton.offClick(onClick);
+  }
+}
