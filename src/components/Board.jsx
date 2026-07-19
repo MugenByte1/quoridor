@@ -57,6 +57,24 @@ export default function Board({ state, mySlot, isMyTurn, actionMode, wallOrient,
 
   return (
     <div className="board-wrap">
+      {/* HUDs */}
+      {state.players.map(p => {
+        let hudClass = "";
+        if (p.slot === 0) hudClass = "hud--north";
+        if (p.slot === 1) hudClass = "hud--south";
+        if (p.slot === 2) hudClass = "hud--west";
+        if (p.slot === 3) hudClass = "hud--east";
+        
+        const isActive = state.turn === p.slot;
+        
+        return (
+          <div key={p.slot} className={`hud ${hudClass} ${isActive ? "hud--active" : ""}`}>
+            <span className="hud__name">{p.name || PLAYER_LABELS[p.slot]}</span>
+            <span className="hud__walls">🧱 {p.wallsLeft}</span>
+          </div>
+        );
+      })}
+
       <div
         className="board"
         style={{ width: "var(--board-size)", height: "var(--board-size)" }}

@@ -206,13 +206,11 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="topbar__turn">
-          {isMyTurn ? "نوبت شماست" : `نوبت ${PLAYER_LABELS[state.turn]}`}
-        </div>
-        {state.status === "playing" && <TurnTimer turnStartTime={state.turnStartTime} />}
-        <div className="topbar__walls">🧱 {myPlayer ? myPlayer.wallsLeft : "-"}</div>
-      </header>
+      {state.status === "playing" && (
+        <header className="topbar">
+          <TurnTimer turnStartTime={state.turnStartTime} />
+        </header>
+      )}
 
       <Board
         state={state}

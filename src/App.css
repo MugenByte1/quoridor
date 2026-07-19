@@ -16,7 +16,8 @@
   --radius: 14px;
 
   /* Responsive Board Dimensions */
-  --board-size: min(100vw - 60px, 440px);
+  --board-wrap-size: min(100vw - 32px, 460px);
+  --board-size: calc(var(--board-wrap-size) - 28px); /* 14px padding * 2 */
   --cell-sz: calc(var(--board-size) * 40 / 440);
   --gap-sz: calc(var(--board-size) * 10 / 440);
   --span-sz: calc(var(--cell-sz) + var(--gap-sz));
@@ -39,6 +40,8 @@ body {
   color: var(--ink);
   font-family: "Inter", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .app-shell {
@@ -129,19 +132,15 @@ body {
   max-width: 480px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   font-family: "Fraunces", serif;
   font-size: 18px;
-}
-
-.topbar__walls {
-  font-family: "Inter", sans-serif;
-  font-weight: 600;
-  color: var(--accent);
+  margin-bottom: 10px;
 }
 
 /* --- تخته‌ی بازی --- */
 .board-wrap {
+  position: relative;
   padding: 14px;
   border-radius: 20px;
   background: linear-gradient(155deg, var(--frame-light), var(--frame));
@@ -224,6 +223,52 @@ body {
 .piece--me {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
+}
+
+/* --- HUD چهار طرف تخته --- */
+.hud {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--panel);
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--frame-light);
+  z-index: 10;
+  color: var(--muted);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.hud--active {
+  color: var(--ink);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(201, 138, 58, 0.5);
+}
+
+.hud--north { top: -14px; left: 50%; transform: translateX(-50%); }
+.hud--active.hud--north { transform: translateX(-50%) scale(1.08); }
+
+.hud--south { bottom: -14px; left: 50%; transform: translateX(-50%); }
+.hud--active.hud--south { transform: translateX(-50%) scale(1.08); }
+
+.hud--west { 
+  left: -22px; top: 50%; 
+  transform: translateY(-50%) rotate(-90deg);
+}
+.hud--active.hud--west { transform: translateY(-50%) rotate(-90deg) scale(1.08); }
+
+.hud--east { 
+  right: -22px; top: 50%; 
+  transform: translateY(-50%) rotate(90deg);
+}
+.hud--active.hud--east { transform: translateY(-50%) rotate(90deg) scale(1.08); }
+
+.hud__walls {
+  color: var(--accent);
 }
 
 /* --- نوار پایین ابزار --- */
